@@ -89,10 +89,9 @@ Or use VS Code Live Server.
 ## 🌐 Deployment
 
 ### Live Website
-https://truthlens.netlify.app
+truthlens41.netlify.app
 
-### Backup Deployment
-https://fakenews12.netlify.app
+
 
 ---
 
