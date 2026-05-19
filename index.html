@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TruthLens — Fake News Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #0a0a0a;
+    --surface:   #111111;
+    --border:    #222222;
+    --accent:    #e8ff3b;
+    --danger:    #ff3b3b;
+    --warn:      #ff9f3b;
+    --safe:      #3bffb0;
+    --text:      #f0f0f0;
+    --muted:     #666666;
+    --card:      #161616;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232,255,59,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,255,59,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 1;
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  .logo span { color: var(--text); }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 64px 20px 48px;
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 10vw, 96px);
+    line-height: 0.95;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+    -webkit-text-stroke: 0;
+  }
+
+  .hero h1 .outline {
+    -webkit-text-stroke: 1px var(--text);
+    color: transparent;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 300;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── MAIN CARD ── */
+  .main-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+  }
+
+  .input-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+
+  .input-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 16px;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus {
+    border-color: var(--accent);
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  .url-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .url-input:focus { border-color: var(--accent); }
+  .url-input::placeholder { color: var(--muted); }
+
+  .analyze-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    padding: 0 32px;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  .analyze-btn:hover { opacity: 0.85; }
+  .analyze-btn:active { transform: scale(0.97); }
+
+  .analyze-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ── LOADING ── */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 48px 0;
+  }
+
+  .loading.active { display: block; }
+
+  .scan-bar {
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .scan-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.4s ease;
+    border-radius: 2px;
+  }
+
+  .loading-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── RESULTS ── */
+  #results { display: none; }
+  #results.active { display: block; }
+
+  /* Score meter */
+  .score-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .score-ring {
+    flex-shrink: 0;
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+
+  .score-ring svg {
+    transform: rotate(-90deg);
+    width: 120px;
+    height: 120px;
+  }
+
+  .score-ring .track {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 8;
+  }
+
+  .score-ring .fill {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 283;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1),
+                stroke 0.4s;
+  }
+
+  .score-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .score-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    line-height: 1;
+  }
+
+  .score-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .score-info { flex: 1; }
+
+  .verdict {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .verdict-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Flags grid */
+  .flags-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .flags-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  @media (max-width: 520px) { .flags-grid { grid-template-columns: 1fr; } }
+
+  .flag-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+  }
+
+  .flag-item.red {
+    background: rgba(255,59,59,0.06);
+    border-color: rgba(255,59,59,0.2);
+  }
+
+  .flag-item.yellow {
+    background: rgba(255,159,59,0.06);
+    border-color: rgba(255,159,59,0.2);
+  }
+
+  .flag-item.green {
+    background: rgba(59,255,176,0.06);
+    border-color: rgba(59,255,176,0.2);
+  }
+
+  .flag-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .flag-item.red .flag-dot    { background: var(--danger); }
+  .flag-item.yellow .flag-dot { background: var(--warn); }
+  .flag-item.green .flag-dot  { background: var(--safe); }
+
+  /* Tips */
+  .tips-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin-bottom: 16px;
+  }
+
+  .tip-item {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tip-item:last-child { border-bottom: none; }
+
+  .tip-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--accent);
+    line-height: 1;
+    flex-shrink: 0;
+    width: 28px;
+  }
+
+  .tip-body strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .tip-body p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Sources */
+  .sources-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px 32px;
+  }
+
+  .source-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13px;
+    transition: color 0.2s;
+  }
+
+  .source-link:last-child { border-bottom: none; }
+  .source-link:hover { color: var(--accent); }
+
+  .source-link span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Reset btn */
+  .reset-btn {
+    display: block;
+    margin: 24px auto 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 10px 24px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  footer p {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .how-it-works {
+    display: flex;
+    gap: 24px;
+  }
+
+  .how-it-works span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .dot.r { background: var(--danger); }
+  .dot.y { background: var(--warn); }
+  .dot.g { background: var(--safe); }
+
+  /* Animate in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .anim { animation: fadeUp 0.5s ease both; }
+  .anim-d1 { animation-delay: 0.05s; }
+  .anim-d2 { animation-delay: 0.10s; }
+  .anim-d3 { animation-delay: 0.15s; }
+  .anim-d4 { animation-delay: 0.20s; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Truth<span>Lens</span></div>
+  <div class="badge">FAKE NEWS DETECTOR v1.0</div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <p class="hero-tag">// AI-powered credibility analysis</p>
+  <h1>
+    <span class="outline">DON'T</span><br>
+    <em>BELIEVE</em><br>
+    <span class="outline">EVERYTHING</span>
+  </h1>
+  <p>Paste any news headline or article text below. TruthLens analyzes linguistic patterns, emotional triggers, and credibility markers to score reliability.</p>
+</section>
+
+<!-- MAIN -->
+<div class="main-wrap">
+
+  <!-- INPUT CARD -->
+  <div class="input-card">
+    <label class="input-label">// paste headline or article text</label>
+    <textarea id="newsText" placeholder="e.g. 'SHOCKING: Scientists CONFIRM that drinking lemon water CURES cancer — Big Pharma doesn't want you to know!'"></textarea>
+
+    <div class="url-row">
+      <input class="url-input" id="sourceUrl" type="text" placeholder="Source URL (optional) — e.g. https://example.com/article"/>
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">ANALYZE</button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="scan-bar"><div class="scan-bar-fill" id="scanBar"></div></div>
+    <p class="loading-text" id="loadingText">SCANNING LINGUISTIC PATTERNS...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <!-- Score -->
+    <div class="score-card anim anim-d1">
+      <div class="score-ring">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="45"/>
+          <circle class="fill" id="ringFill" cx="50" cy="50" r="45"/>
+        </svg>
+        <div class="score-center">
+          <div class="score-num" id="scoreNum">0</div>
+          <div class="score-label">CREDIBILITY</div>
+        </div>
+      </div>
+      <div class="score-info">
+        <div class="verdict" id="verdict"></div>
+        <div class="verdict-desc" id="verdictDesc"></div>
+      </div>
+    </div>
+
+    <!-- Red Flags / Green Flags -->
+    <div class="flags-card anim anim-d2">
+      <div class="section-title">credibility signals</div>
+      <div class="flags-grid" id="flagsGrid"></div>
+    </div>
+
+    <!-- Tips -->
+    <div class="tips-card anim anim-d3">
+      <div class="section-title">how to verify this</div>
+      <div id="tipsList"></div>
+    </div>
+
+    <!-- Fact-check Sources -->
+    <div class="sources-card anim anim-d4">
+      <div class="section-title">verify on trusted sources</div>
+      <a class="source-link" href="https://www.snopes.com" target="_blank">
+        Snopes.com — Fact Checking Since 1994
+        <span>snopes.com →</span>
+      </a>
+      <a class="source-link" href="https://www.factcheck.org" target="_blank">
+        FactCheck.org — Annenberg Public Policy Center
+        <span>factcheck.org →</span>
+      </a>
+      <a class="source-link" href="https://www.boomlive.in" target="_blank">
+        BoomLive.in — India's Leading Fact Checker
+        <span>boomlive.in →</span>
+      </a>
+      <a class="source-link" href="https://www.altnews.in" target="_blank">
+        AltNews.in — Indian Fact Checking Website
+        <span>altnews.in →</span>
+      </a>
+      <a class="source-link" href="https://vishvasnews.com/english/" target="_blank">
+        VishvasNews.com — Dainik Jagran Fact Check
+        <span>vishvasnews.com →</span>
+      </a>
+    </div>
+
+    <button class="reset-btn" onclick="reset()">← ANALYZE ANOTHER</button>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 TruthLens · Built with HTML/CSS/JS · No data stored</p>
+  <div class="how-it-works">
+    <span><i class="dot r"></i> High Risk</span>
+    <span><i class="dot y"></i> Uncertain</span>
+    <span><i class="dot g"></i> Credible</span>
+  </div>
+</footer>
+
+<script>
+// ─────────────────────────────────────────
+//  ANALYSIS ENGINE
+//  Rule-based NLP scoring system
+// ─────────────────────────────────────────
+
+const RED_FLAGS = [
+  { pattern: /SHOCKING|BREAKING|BOMBSHELL|EXPLOSIVE/gi,        label: "All-caps sensational words",         weight: -15 },
+  { pattern: /you won'?t believe|can'?t believe/gi,            label: "Disbelief clickbait phrases",         weight: -12 },
+  { pattern: /big pharma|deep state|illuminati|globalist/gi,   label: "Conspiracy theory language",          weight: -18 },
+  { pattern: /CURE[SD]?|miracle cure|secret remedy/gi,         label: "Unverified medical miracle claims",   weight: -20 },
+  { pattern: /they don'?t want you to know/gi,                 label: "Suppressed knowledge narrative",      weight: -16 },
+  { pattern: /\b(always|never|every|all|none)\b.*\b(lie|cheat|hide|steal)\b/gi, label: "Absolute generalizations",  weight: -10 },
+  { pattern: /share before (it'?s?|they) (deleted?|removed?)/gi, label: "Urgency to share before removal",  weight: -14 },
+  { pattern: /!!!+|\?\?\?+/g,                                  label: "Excessive punctuation",               weight: -8  },
+  { pattern: /scientists (confirm|prove|discover) that .{0,30} cure/gi, label: "Vague scientific authority claim", weight: -15 },
+  { pattern: /100%|guaranteed|proven fact/gi,                  label: "Overconfident absolute claims",       weight: -10 },
+  { pattern: /sources say|insiders reveal|anonymous tip/gi,    label: "Anonymous unverified sources",        weight: -12 },
+  { pattern: /fake news|mainstream media (lies|hiding)/gi,     label: "Anti-media rhetoric",                 weight: -10 },
+];
+
+const GREEN_FLAGS = [
+  { pattern: /according to (dr\.|professor|researchers? at|study by)/gi, label: "Named academic/expert sources",   weight: +14 },
+  { pattern: /published in|peer.reviewed|journal of/gi,                  label: "Academic journal reference",      weight: +16 },
+  { pattern: /government (data|statistics|report)/gi,                    label: "Official government data cited",  weight: +12 },
+  { pattern: /\b(however|although|on the other hand|critics)\b/gi,       label: "Balanced multiple perspectives",  weight: +10 },
+  { pattern: /\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}|\b(january|february|march|april|may|june|july|august|september|october|november|december)\b \d{1,2}/gi, label: "Specific dates mentioned", weight: +8 },
+  { pattern: /\(\d{4}\)|\[\d+\]|ibid\.|et al\./gi,                       label: "Citation formatting present",    weight: +12 },
+  { pattern: /press conference|official statement|spokesperson/gi,        label: "Official source attribution",    weight: +10 },
+];
+
+const NEUTRAL_CHECKS = [
+  { test: t => t.split(/[.!?]/).length < 2,               label: "Very short — hard to verify",    color: "yellow", weight: -5 },
+  { test: t => (t.match(/[A-Z]{2,}/g)||[]).length > 3,    label: "Many ALL-CAPS words used",       color: "red",    weight: -8 },
+  { test: t => t.length > 200,                             label: "Detailed content — more context",color: "green",  weight: +5 },
+  { test: t => /\d+%|\d+ (people|cases|patients)/i.test(t), label: "Specific statistics cited",    color: "green",  weight: +8 },
+  { test: t => /\bsaid\b|\bstated\b|\baccording\b/i.test(t), label: "Quotation or attribution used", color: "green", weight: +6 },
+  { test: t => /(free|win|click here|subscribe now)/i.test(t), label: "Promotional language found", color: "red",   weight: -10 },
+];
+
+function analyze() {
+  const text = document.getElementById('newsText').value.trim();
+  if (!text || text.length < 10) {
+    alert('Please enter a headline or article text to analyze.');
+    return;
+  }
+
+  // Show loading
+  document.getElementById('results').classList.remove('active');
+  const loading = document.getElementById('loading');
+  loading.classList.add('active');
+  document.getElementById('analyzeBtn').disabled = true;
+
+  const steps = [
+    'SCANNING LINGUISTIC PATTERNS...',
+    'DETECTING EMOTIONAL TRIGGERS...',
+    'CHECKING CREDIBILITY MARKERS...',
+    'ANALYZING SOURCE SIGNALS...',
+    'COMPUTING CREDIBILITY SCORE...',
+  ];
+
+  let step = 0;
+  const bar = document.getElementById('scanBar');
+  const loadTxt = document.getElementById('loadingText');
+
+  const interval = setInterval(() => {
+    step++;
+    bar.style.width = (step / steps.length * 100) + '%';
+    loadTxt.textContent = steps[Math.min(step, steps.length - 1)];
+    if (step >= steps.length) {
+      clearInterval(interval);
+      setTimeout(() => showResults(text), 400);
+    }
+  }, 350);
+}
+
+function showResults(text) {
+  let score = 50; // neutral start
+  const signals = [];
+
+  // Check red flags
+  RED_FLAGS.forEach(f => {
+    if (f.pattern.test(text)) {
+      f.pattern.lastIndex = 0;
+      score += f.weight;
+      signals.push({ label: f.label, color: 'red' });
+    }
+  });
+
+  // Check green flags
+  GREEN_FLAGS.forEach(f => {
+    if (f.pattern.test(text)) {
+      f.pattern.lastIndex = 0;
+      score += f.weight;
+      signals.push({ label: f.label, color: 'green' });
+    }
+  });
+
+  // Neutral checks
+  NEUTRAL_CHECKS.forEach(c => {
+    if (c.test(text)) {
+      score += c.weight;
+      signals.push({ label: c.label, color: c.color });
+    }
+  });
+
+  // Clamp score
+  score = Math.max(5, Math.min(95, Math.round(score)));
+
+  // Verdict
+  let verdict, verdictDesc, ringColor;
+  if (score >= 70) {
+    verdict = 'LIKELY CREDIBLE';
+    verdictDesc = 'This content shows several credibility markers. Still verify with trusted fact-checking sites before sharing, especially for sensitive claims.';
+    ringColor = 'var(--safe)';
+  } else if (score >= 40) {
+    verdict = 'NEEDS VERIFICATION';
+    verdictDesc = 'Mixed signals detected. This content may be partially true or missing context. Cross-check with at least 2–3 trusted sources before forming an opinion.';
+    ringColor = 'var(--warn)';
+  } else {
+    verdict = 'HIGH RISK — LIKELY FAKE';
+    verdictDesc = 'Multiple red flags detected. This content shows strong characteristics of misinformation. Do NOT share without thorough fact-checking.';
+    ringColor = 'var(--danger)';
+  }
+
+  // Render score ring
+  document.getElementById('scoreNum').textContent = score;
+  document.getElementById('scoreNum').style.color = ringColor;
+  const ring = document.getElementById('ringFill');
+  ring.style.stroke = ringColor;
+  const circumference = 283;
+  setTimeout(() => {
+    ring.style.strokeDashoffset = circumference - (score / 100) * circumference;
+  }, 100);
+
+  // Verdict
+  document.getElementById('verdict').textContent = verdict;
+  document.getElementById('verdict').style.color = ringColor;
+  document.getElementById('verdictDesc').textContent = verdictDesc;
+
+  // Flags
+  const flagsGrid = document.getElementById('flagsGrid');
+  flagsGrid.innerHTML = '';
+  if (signals.length === 0) {
+    signals.push({ label: 'No strong signals detected — content is neutral', color: 'yellow' });
+  }
+  signals.forEach(s => {
+    flagsGrid.innerHTML += `
+      <div class="flag-item ${s.color}">
+        <div class="flag-dot"></div>
+        <span>${s.label}</span>
+      </div>`;
+  });
+
+  // Tips
+  const tips = getTips(score, text);
+  const tipsList = document.getElementById('tipsList');
+  tipsList.innerHTML = '';
+  tips.forEach((t, i) => {
+    tipsList.innerHTML += `
+      <div class="tip-item">
+        <div class="tip-num">0${i+1}</div>
+        <div class="tip-body">
+          <strong>${t.title}</strong>
+          <p>${t.desc}</p>
+        </div>
+      </div>`;
+  });
+
+  // Show results
+  document.getElementById('loading').classList.remove('active');
+  document.getElementById('results').classList.add('active');
+  document.getElementById('analyzeBtn').disabled = false;
+
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function getTips(score, text) {
+  const tips = [
+    {
+      title: "Check the source domain",
+      desc: "Look up the website publishing this content. Is it a known, established outlet? Sites with misspelled versions of real news names (e.g. ABCnews.com.co) are red flags."
+    },
+    {
+      title: "Search the headline on Google",
+      desc: "Copy the headline and search it. If it's real news, multiple credible outlets will cover it. If only unknown sites carry it, be suspicious."
+    },
+    {
+      title: "Check the publication date",
+      desc: "Old stories are often recirculated as breaking news. Always check when the article was actually published."
+    },
+    {
+      title: "Verify on Indian fact-checkers",
+      desc: "For India-specific news, check BoomLive.in, AltNews.in, or VishvasNews.com — they specialize in Indian misinformation."
+    },
+    {
+      title: "Check your emotional reaction",
+      desc: "If a headline makes you immediately angry, shocked, or smug — pause. Fake news is designed to trigger strong emotions that bypass critical thinking."
+    },
+  ];
+
+  if (score < 40) {
+    tips.unshift({
+      title: "⚠ Do NOT share yet",
+      desc: "This content scored very low for credibility. Sharing unverified content — even with good intentions — contributes to misinformation. Verify first."
+    });
+  }
+
+  return tips.slice(0, 4);
+}
+
+function reset() {
+  document.getElementById('newsText').value = '';
+  document.getElementById('sourceUrl').value = '';
+  document.getElementById('results').classList.remove('active');
+  document.getElementById('scanBar').style.width = '0%';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
